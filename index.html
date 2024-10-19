@@ -49,6 +49,219 @@
             <strong>HOW TO PLAY:</strong> Use your <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong>
         </p>
     </div>
-    <script src="game.js"></script>
+<!--     <script src="game.js"></script> -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+    const gridDisplay = document.querySelector('.grid-container');
+    const scoreDisplay = document.querySelector('.score-container');
+    const bestDisplay = document.querySelector('.best-container');
+    const newGameButton = document.querySelector('.new-game-button');
+    const tileContainer = document.querySelector('.tile-container');
+    let tiles = [];
+    let score = 0;
+    let best = 0;
+
+    // Create the playing board
+    function createBoard() {
+        gridDisplay.innerHTML = ''; // Clear previous grid cells
+        tiles = new Array(16).fill(0); // Reset tiles array using for loop later
+        for (let i = 0; i < 16; i++) {
+            let tile = document.createElement('div');
+            tile.classList.add('grid-cell');
+            gridDisplay.appendChild(tile);
+        }
+        addNumber();
+        addNumber();
+    }
+
+    // Add a number to the board
+    function addNumber() {
+        let emptyTiles = [];
+        for (let i = 0; i < tiles.length; i++) {
+            if (tiles[i] === 0) {
+                emptyTiles[emptyTiles.length] = i; // Manual push
+            }
+        }
+        if (emptyTiles.length > 0) {
+            let randomIndex = Math.floor(Math.random() * emptyTiles.length);
+            tiles[emptyTiles[randomIndex]] = 2;
+            displayTiles();
+        }
+    }
+
+    // Display the tiles on the board
+    function displayTiles() {
+        tileContainer.innerHTML = '';
+        let size = window.innerWidth > 530 ? 110 : 80;
+        for (let index = 0; index < tiles.length; index++) {
+            let tileValue = tiles[index];
+            if (tileValue !== 0) {
+                let tileElement = document.createElement('div');
+                tileElement.classList.add('tile', `tile-${tileValue}`);
+                tileElement.innerText = tileValue;
+                tileElement.style.top = `${Math.floor(index / 4) * size}px`;
+                tileElement.style.left = `${(index % 4) * size}px`;
+                tileContainer.appendChild(tileElement);
+            }
+        }
+        checkForGameOver();
+        checkForWin();
+    }
+
+    // Check for game over condition
+    function checkForGameOver() {
+        let hasMoves = false;
+        for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+                let currentIndex = i * 4 + j;
+                if (tiles[currentIndex] === 0) return;
+                if (j < 3 && tiles[currentIndex] === tiles[currentIndex + 1]) hasMoves = true; // Horizontal
+                if (i < 3 && tiles[currentIndex] === tiles[currentIndex + 4]) hasMoves = true; // Vertical
+            }
+        }
+        if (!hasMoves) {
+            alert("Game Over! No more moves available.");
+        }
+    }
+
+    // Check for 2048 tile
+    function checkForWin() {
+        for (let i = 0; i < tiles.length; i++) {
+            if (tiles[i] === 2048) {
+                alert("Congratulations! You've reached the 2048 tile!");
+                return;
+            }
+        }
+    }
+
+    // Handle swipe events
+    function moveTiles(direction) {
+        let newTiles = new Array(16); // Manual copy of tiles array
+        for (let i = 0; i < 4; i++) {
+            let row = new Array(4);
+            for (let j = 0; j < 4; j++) {
+                if (direction === 'right' || direction === 'left') {
+                    row[j] = tiles[i * 4 + j];
+                } else {
+                    row[j] = tiles[j * 4 + i];
+                }
+            }
+            if (direction === 'right' || direction === 'down') {
+                row = reverseArray(row);
+            }
+            row = slide(row);
+            if (direction === 'right' || direction === 'down') {
+                row = reverseArray(row);
+            }
+            for (let j = 0; j < 4; j++) {
+                if (direction === 'right' || direction === 'left') {
+                    newTiles[i * 4 + j] = row[j];
+                } else {
+                    newTiles[j * 4 + i] = row[j];
+                }
+            }
+        }
+        if (!arraysEqual(newTiles, tiles)) {
+            tiles = newTiles;
+            addNumber();
+            displayTiles();
+        }
+    }
+
+    // Reverse array manually
+    function reverseArray(arr) {
+        let reversed = new Array(arr.length);
+        for (let i = 0; i < arr.length; i++) {
+            reversed[i] = arr[arr.length - 1 - i];
+        }
+        return reversed;
+    }
+
+    // Check if two arrays are equal (manually)
+    function arraysEqual(arr1, arr2) {
+        for (let i = 0; i < arr1.length; i++) {
+            if (arr1[i] !== arr2[i]) return false;
+        }
+        return true;
+    }
+
+    // Slide the row manually
+    function slide(row) {
+        let newRow = new Array(4).fill(0); 
+        let newIndex = 0;
+        for (let i = 0; i < row.length; i++) {
+            if (row[i] !== 0) {
+                newRow[newIndex] = row[i];
+                newIndex++;
+            }
+        }
+        for (let i = 0; i < newRow.length - 1; i++) {
+            if (newRow[i] === newRow[i + 1]) {
+                newRow[i] *= 2;
+                score += newRow[i];
+                for (let j = i + 1; j < newRow.length - 1; j++) {
+                    newRow[j] = newRow[j + 1];
+                }
+                newRow[newRow.length - 1] = 0;
+            }
+        }
+        return newRow;
+    }
+
+    // Listen for key presses
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight') moveTiles('right');
+        if (e.key === 'ArrowLeft') moveTiles('left');
+        if (e.key === 'ArrowUp') moveTiles('up');
+        if (e.key === 'ArrowDown') moveTiles('down');
+        scoreDisplay.textContent = score;
+        if (score > best) {
+            best = score;
+            bestDisplay.textContent = best;
+        }
+    });
+
+    // Variables to store touch positions
+    let touchStartX = 0, touchStartY = 0;
+    let touchEndX = 0, touchEndY = 0;
+    
+    // Detect swipe
+    document.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+    });
+    
+    document.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+        
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            if (diffX > 0) moveTiles('right');
+            else moveTiles('left');
+        } else {
+            if (diffY > 0) moveTiles('down');
+            else moveTiles('up');
+        }
+        scoreDisplay.textContent = score;
+        if (score > best) {
+            best = score;
+            bestDisplay.textContent = best;
+        }
+    });
+
+    // Start new game
+    newGameButton.addEventListener('click', () => {
+        score = 0;
+        createBoard();
+        scoreDisplay.textContent = "Current score = " + score;
+        bestDisplay.textContent = "Best score = " + best;
+    });
+
+    createBoard();
+});
+
+</script>
 </body>
 </html>
